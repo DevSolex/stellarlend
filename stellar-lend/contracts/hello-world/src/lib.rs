@@ -69,6 +69,9 @@ pub mod types;
 /// Per-block memoized borrow-rate curve evaluations (issue #1640)
 pub mod rates;
 
+/// Per-pool withdrawal queue when utilization is pinned (issue #1586)
+pub mod withdraw_queue;
+
 #[no_mangle]
 pub fn transfer_admin(
     env: Env,
@@ -163,4 +166,96 @@ pub fn add_pause_guardian(
     guardian: Address,
 ) -> Result<(), errors::LendingError> {
     pause::add_guardian(&env, admin, guardian).map_err(Into::into)
+}
+
+// ── Per-pool withdrawal queue (issue #1586) ────────────────────────────────
+
+#[no_mangle]
+pub fn request_withdrawal(
+    env: Env,
+    pool: Option<Address>,
+    user: Address,
+    amount: i128,
+) -> Result<withdraw_queue::WithdrawRequestOutcome, errors::LendingError> {
+    withdraw_queue::request_withdrawal(&env, pool, user, amount)
+}
+
+#[no_mangle]
+pub fn cancel_withdraw_request(
+    env: Env,
+    entry_id: u64,
+    caller: Address,
+) -> Result<(), errors::LendingError> {
+    withdraw_queue::cancel_request(&env, entry_id, caller)
+}
+
+#[no_mangle]
+pub fn process_withdraw_queue(
+    env: Env,
+    pool: Option<Address>,
+    processor: Address,
+    max_count: u32,
+) -> Result<withdraw_queue::ProcessResult, errors::LendingError> {
+    withdraw_queue::process_withdrawals(&env, pool, processor, max_count)
+}
+
+#[no_mangle]
+pub fn set_withdraw_queue_config(
+    env: Env,
+    caller: Address,
+    pool: Option<Address>,
+    config: withdraw_queue::WithdrawQueueConfig,
+) -> Result<(), errors::LendingError> {
+    withdraw_queue::set_config(&env, &caller, &pool, config)
+}
+
+#[no_mangle]
+pub fn get_withdraw_queue_config(
+    env: Env,
+    pool: Option<Address>,
+) -> withdraw_queue::WithdrawQueueConfig {
+    withdraw_queue::get_config(&env, &pool)
+}
+
+#[no_mangle]
+pub fn get_withdraw_request(
+    env: Env,
+    entry_id: u64,
+) -> Option<withdraw_queue::WithdrawQueueEntry> {
+    withdraw_queue::get_request(&env, entry_id)
+}
+
+#[no_mangle]
+pub fn get_pending_withdraw_requests(
+    env: Env,
+    pool: Option<Address>,
+) -> soroban_sdk::Vec<withdraw_queue::WithdrawQueueEntry> {
+    withdraw_queue::get_pending_requests(&env, &pool)
+}
+
+#[no_mangle]
+pub fn get_withdraw_queue_stats(
+    env: Env,
+    pool: Option<Address>,
+) -> withdraw_queue::WithdrawQueueStats {
+    withdraw_queue::get_stats(&env, &pool)
+}
+
+#[no_mangle]
+pub fn get_withdraw_queue_alerts(
+    env: Env,
+    pool: Option<Address>,
+    max_count: u32,
+) -> soroban_sdk::Vec<withdraw_queue::WithdrawQueueAlert> {
+    withdraw_queue::get_alerts(&env, &pool, max_count)
+}
+
+#[no_mangle]
+pub fn is_pool_utilization_pinned(env: Env, pool: Option<Address>) -> bool {
+    withdraw_queue::is_utilization_pinned(&env, &pool)
+}
+
+#[no_mangle]
+pub fn cleanup_withdraw_queue(env: Env, pool: Option<Address>) -> u32 {
+    withdraw_queue::cleanup_expired(&env, &pool)
 }
