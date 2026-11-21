@@ -34,3 +34,6 @@ mod harness;
 
 #[cfg(test)]
 mod withdraw_queue_tests;
+
+#[cfg(test)]
+mod strategy_tests;

@@ -72,6 +72,9 @@ pub mod rates;
 /// Per-pool withdrawal queue when utilization is pinned (issue #1586)
 pub mod withdraw_queue;
 
+/// Strategy registry for yield-routing adapters (issue #1580)
+pub mod strategy;
+
 #[no_mangle]
 pub fn transfer_admin(
     env: Env,
@@ -258,4 +261,109 @@ pub fn is_pool_utilization_pinned(env: Env, pool: Option<Address>) -> bool {
 #[no_mangle]
 pub fn cleanup_withdraw_queue(env: Env, pool: Option<Address>) -> u32 {
     withdraw_queue::cleanup_expired(&env, &pool)
+}
+
+// ── Strategy registry for yield-routing adapters (issue #1580) ─────────────
+
+#[no_mangle]
+pub fn set_strategy_registry_config(
+    env: Env,
+    caller: Address,
+    config: strategy::RegistryConfig,
+) -> Result<(), errors::LendingError> {
+    strategy::set_registry_config(&env, &caller, config)
+}
+
+#[no_mangle]
+pub fn get_strategy_registry_config(env: Env) -> strategy::RegistryConfig {
+    strategy::get_registry_config(&env)
+}
+
+#[no_mangle]
+pub fn register_strategy(
+    env: Env,
+    caller: Address,
+    adapter: Address,
+    name: soroban_sdk::Symbol,
+    max_allocation: i128,
+) -> Result<u64, errors::LendingError> {
+    strategy::register_strategy(&env, &caller, adapter, name, max_allocation)
+}
+
+#[no_mangle]
+pub fn update_strategy(
+    env: Env,
+    caller: Address,
+    strategy_id: u64,
+    max_allocation: Option<i128>,
+    status: Option<strategy::StrategyStatus>,
+) -> Result<(), errors::LendingError> {
+    strategy::update_strategy(&env, &caller, strategy_id, max_allocation, status)
+}
+
+#[no_mangle]
+pub fn remove_strategy(
+    env: Env,
+    caller: Address,
+    strategy_id: u64,
+) -> Result<(), errors::LendingError> {
+    strategy::remove_strategy(&env, &caller, strategy_id)
+}
+
+#[no_mangle]
+pub fn set_strategy_target_allocation(
+    env: Env,
+    caller: Address,
+    strategy_id: u64,
+    target: i128,
+) -> Result<(), errors::LendingError> {
+    strategy::set_target_allocation(&env, &caller, strategy_id, target)
+}
+
+#[no_mangle]
+pub fn route_strategies(
+    env: Env,
+    caller: Address,
+) -> Result<soroban_sdk::Vec<strategy::RouteInstruction>, errors::LendingError> {
+    strategy::route(&env, &caller)
+}
+
+#[no_mangle]
+pub fn deploy_to_strategy(
+    env: Env,
+    caller: Address,
+    strategy_id: u64,
+    amount: i128,
+) -> Result<i128, errors::LendingError> {
+    strategy::deploy(&env, &caller, strategy_id, amount)
+}
+
+#[no_mangle]
+pub fn withdraw_from_strategy(
+    env: Env,
+    caller: Address,
+    strategy_id: u64,
+    amount: i128,
+) -> Result<i128, errors::LendingError> {
+    strategy::withdraw(&env, &caller, strategy_id, amount)
+}
+
+#[no_mangle]
+pub fn get_strategy(env: Env, strategy_id: u64) -> Option<strategy::Strategy> {
+    strategy::get_strategy(&env, strategy_id)
+}
+
+#[no_mangle]
+pub fn list_strategies(env: Env) -> soroban_sdk::Vec<strategy::Strategy> {
+    strategy::list_strategies(&env)
+}
+
+#[no_mangle]
+pub fn get_strategy_registry_stats(env: Env) -> strategy::RegistryStats {
+    strategy::get_registry_stats(&env)
+}
+
+#[no_mangle]
+pub fn get_strategy_target_allocations(env: Env) -> soroban_sdk::Map<u64, i128> {
+    strategy::get_target_allocations(&env)
 }
